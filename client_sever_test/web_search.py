@@ -3,6 +3,12 @@ from pydantic import BaseModel
 from pydantic_extra_types.timezone_name import TimeZoneName
 from openai import OpenAI
 from mcp.server import FastMCP
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+openai_api_key = os.getenv('OPENAI_API_KEY')
 
 app = FastMCP('web-search')
 
@@ -23,7 +29,7 @@ def web_search(
     user_location: UserLocation = None
 ) -> list[str]:
     
-    client = OpenAI()
+    client = OpenAI(api_key=openai_api_key)
 
     response = client.responses.create(
         model = model,
