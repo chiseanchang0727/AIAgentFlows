@@ -12,6 +12,8 @@ openai_api_key = os.getenv('OPENAI_API_KEY')
 
 app = FastMCP('web-search')
 
+print("Start web_search.py.")
+
 class UserLocation(BaseModel):
     type: Literal["approximate"] = "approximate"
     city: str

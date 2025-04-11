@@ -11,6 +11,7 @@ dependencies = [
     "ipykernel>=6.29.5",
     "mcp[cli]>=1.5.0",
     "openai>=1.70.0",
+    "pandas>=2.2.3",
     "pydantic-extra-types>=2.10.3",
     "tzdata>=2025.2",
 ]
