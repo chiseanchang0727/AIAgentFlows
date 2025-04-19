@@ -26,6 +26,7 @@ class MCPClient:
 
 
     async def connect_to_sever(self):
+        print('we here')
         sever_params = StdioServerParameters(
             command='uv',
             args=['run', 'web_search.py'],
