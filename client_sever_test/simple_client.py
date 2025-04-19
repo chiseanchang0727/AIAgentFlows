@@ -40,7 +40,7 @@ async def main():
                 # logger.info(f"Available tools: {response}")
 
                 # Example tool call (commented out)
-                response = await session.call_tool('web_search', {'query': 'current sp500 index value'})
+                response = await session.call_tool('web_search', {'input': 'current sp500 index value'})
                 logger.info(f"Tool response: {response}")
     except Exception as e:
         logger.exception("An error occurred during MCP session")
