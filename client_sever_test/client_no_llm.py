@@ -6,6 +6,7 @@ from mcp import ClientSession, StdioServerParameters
 
 # Setup logger
 logger = logging.getLogger("mcp_client")
+# Sets the logging level to DEBUG, so this logger will capture all messages at DEBUG level and above (i.e., DEBUG, INFO, WARNING, ERROR, CRITICAL).
 logger.setLevel(logging.DEBUG)
 
 handler = logging.StreamHandler()

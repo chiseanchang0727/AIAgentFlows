@@ -1,7 +1,7 @@
 """
 User chat with LLM to use the tools
 """
-
+import logging
 import json
 import asyncio
 import os
@@ -11,9 +11,10 @@ from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-
 from dotenv import load_dotenv
 
+logger = logging.getLogger("mcp_client")
+logger.setLevel(logging.DEBUG)
 load_dotenv()
 api_key = os.getenv('OPENAI_API_KEY')
 
@@ -21,8 +22,8 @@ api_key = os.getenv('OPENAI_API_KEY')
 class MCPClient:
     def __init__(self):
         self.session = Optional[ClientSession] = None
-        self.exit_stack = AsyncExitStack
-        self.client = OpenAI()
+        self.exit_stack = AsyncExitStack()
+        self.client = OpenAI(api_key=api_key, model='gpt-4o', temperature=0.0, max_tokens=2000)
 
 
     async def connect_to_sever(self):
@@ -39,9 +40,7 @@ class MCPClient:
         3. Store the transport (connection handle) in stdio_transport
         4. It will be auto-cleaned when self.exit_stack is closed
         """
-        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(sever_params))
-
-        stdio, write = stdio_transport
+        stdio, write = await self.exit_stack.enter_async_context(stdio_client(sever_params))
 
         """
         1. ClientSession(...) creates a session object that communicates over the stdio transport
@@ -53,7 +52,7 @@ class MCPClient:
 
         await self.session.initialize()
 
-    # interaction between user and mcp sever
+    # Interaction between user and mcp sever
     async def process_query(self, query:str) -> str:
         system_prompt = (
             "You are a helpful assistant."
@@ -70,5 +69,49 @@ class MCPClient:
             {"role": "user", "content": query}
         ]
 
-        # get all tools
+        # Get all tools
         response = await self.session.list_tools()
+        
+        # Describe the tools
+        available_tools = [{
+            "type": "function",
+            "function": {
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": tool.inputSchema
+            }
+        } for tool in response.tools]
+        
+        # Add the tools to the messages
+        response = self.client.chat.completions.create(
+            model=os.getenv('OPENAI_MODEL', 'gpt-4o'),
+            messages=messages,
+            tools=available_tools
+        )
+        
+        content = response.choices[0]
+        if content.finish_reason == 'tool_calls':
+            # If LLM decide to call tools, parse and pass the info to the session
+            tool_call = content.message.tool_calls[0]
+            tool_name = tool_call.function.name
+            tool_args = json.loads(tool_call.function.arguments)
+            
+            result = await self.session.call_tool(tool_name, tool_args)
+            print(f"\n\n[Calling tool {tool_name} with args {tool_args}]\n\n")
+            
+            messages.append(content.message.model_dump())
+            messages.append({
+                'role': 'tool',
+                'content': result.content[0].text,
+                'tool_call_id': tool_call.id
+            })
+            
+            # Pass the integrated the tool result into the messages to LLM
+            response = self.client.chat.completions.create(
+                model=os.getenv("OPENAI_MODEL"),
+                messages=messages,
+            )
+            
+            return response.choices[0].message.content
+        
+        return content.message.content
