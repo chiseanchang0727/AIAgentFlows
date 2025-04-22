@@ -71,7 +71,7 @@ class MCPClient:
 
         # Get all tools
         response = await self.session.list_tools()
-        
+
         # Describe the tools
         available_tools = [{
             "type": "function",
@@ -81,7 +81,7 @@ class MCPClient:
                 "input_schema": tool.inputSchema
             }
         } for tool in response.tools]
-        
+
         # Add the tools to the messages
         response = self.client.chat.completions.create(
             model=os.getenv('OPENAI_MODEL', 'gpt-4o'),
@@ -90,20 +90,15 @@ class MCPClient:
             temperature=0.0,
             max_tokens=2000
         )
+        # print("model response: ", response)
         
         content = response.choices[0]
         if content.finish_reason == 'tool_calls':   
             # If LLM decide to call tools, pass the pasred info to the session
             tool_call = content.message.tool_calls[0]
             tool_name = tool_call.function.name
-            
-            try:
-                tool_args = json.loads(tool_call.function.arguments)
-            except Exception as e:
-                logger.error(f"Failed to parse tool arguments: {e}")
-                tool_args = {}
-
-            print(f"[Tool args raw] {tool_call.function.arguments}")
+            tool_args = {"input": query}
+           
             # Execute the tool call and get the result
             result = await self.session.call_tool(tool_name, tool_args)
             print(f"\n\n[Calling tool {tool_name} with args {tool_args}]\n\n")

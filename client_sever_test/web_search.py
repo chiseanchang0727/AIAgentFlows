@@ -57,7 +57,8 @@ def web_search(
                     "user_location": user_location.model_dump() if user_location else None
                 }
             ],
-            input=input
+            input=input,
+            temperature=0.0,
         )
 
         logger.info("OpenAI response successfully received.")
