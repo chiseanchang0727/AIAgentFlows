@@ -21,13 +21,13 @@ api_key = os.getenv('OPENAI_API_KEY')
 
 class MCPClient:
     def __init__(self):
-        self.session = Optional[ClientSession] = None
+        self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
-        self.client = OpenAI(api_key=api_key, model='gpt-4o', temperature=0.0, max_tokens=2000)
+        self.client = OpenAI(api_key=api_key)
 
 
     async def connect_to_sever(self):
-        print('we here')
+
         sever_params = StdioServerParameters(
             command='uv',
             args=['run', 'web_search.py'],
@@ -86,32 +86,84 @@ class MCPClient:
         response = self.client.chat.completions.create(
             model=os.getenv('OPENAI_MODEL', 'gpt-4o'),
             messages=messages,
-            tools=available_tools
+            tools=available_tools,
+            temperature=0.0,
+            max_tokens=2000
         )
         
         content = response.choices[0]
-        if content.finish_reason == 'tool_calls':
-            # If LLM decide to call tools, parse and pass the info to the session
+        if content.finish_reason == 'tool_calls':   
+            # If LLM decide to call tools, pass the pasred info to the session
             tool_call = content.message.tool_calls[0]
             tool_name = tool_call.function.name
-            tool_args = json.loads(tool_call.function.arguments)
             
+            try:
+                tool_args = json.loads(tool_call.function.arguments)
+            except Exception as e:
+                logger.error(f"Failed to parse tool arguments: {e}")
+                tool_args = {}
+
+            print(f"[Tool args raw] {tool_call.function.arguments}")
+            # Execute the tool call and get the result
             result = await self.session.call_tool(tool_name, tool_args)
             print(f"\n\n[Calling tool {tool_name} with args {tool_args}]\n\n")
+            
+            tool_output = result.content[0].text if result.content else "[Tool returned no content]"
             
             messages.append(content.message.model_dump())
             messages.append({
                 'role': 'tool',
-                'content': result.content[0].text,
+                'content': tool_output,
                 'tool_call_id': tool_call.id
             })
             
             # Pass the integrated the tool result into the messages to LLM
             response = self.client.chat.completions.create(
-                model=os.getenv("OPENAI_MODEL"),
+                model=os.getenv('OPENAI_MODEL', 'gpt-4o'),
                 messages=messages,
+                tools=available_tools,
+                temperature=0.0,
+                max_tokens=2000
             )
             
             return response.choices[0].message.content
         
         return content.message.content
+    
+    
+    async def chat_loop(self):
+        while True:
+            try:
+                query = input('\nQuery: ').strip()
+                
+                if query.lower() in ['exit', 'quit']:
+                    break
+                
+                response = await self.process_query(query)
+                print("\n" + (response or "[No response from model]"))
+                
+            except:
+                import traceback
+                traceback.print_exc()
+                
+    async def cleanup(self):
+        # Clean up resources
+        await self.exit_stack.aclose()
+        
+        
+
+async def main():
+    client = MCPClient()
+    
+    try:
+        
+        logger.info("Start connecting to mcp server")
+        await client.connect_to_sever()
+        logger.info("Connected to mcp server")
+        await client.chat_loop()
+    finally:
+        await client.cleanup()
+        
+
+if __name__ == '__main__':
+    asyncio.run(main())
