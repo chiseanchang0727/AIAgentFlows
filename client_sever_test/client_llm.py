@@ -84,7 +84,7 @@ class MCPClient:
 
         # Add the tools to the messages
         response = self.client.chat.completions.create(
-            model=os.getenv('OPENAI_MODEL', 'gpt-4o'),
+            model=os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),
             messages=messages,
             tools=available_tools,
             temperature=0.0,
@@ -114,7 +114,7 @@ class MCPClient:
             
             # Pass the integrated the tool result into the messages to LLM
             response = self.client.chat.completions.create(
-                model=os.getenv('OPENAI_MODEL', 'gpt-4o'),
+                model=os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),
                 messages=messages,
                 tools=available_tools,
                 temperature=0.0,

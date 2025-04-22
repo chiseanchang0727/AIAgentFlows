@@ -28,10 +28,10 @@ logger.info("FastMCP 'web-search' app initialized.")
 # === Pydantic Model ===
 class UserLocation(BaseModel):
     type: Literal["approximate"] = "approximate"
-    city: str
-    country: str = None
-    region: str = None
-    timezone: TimeZoneName
+    city: str = "Stephens Pass"
+    country: str = "US"
+    region: str = "WA"
+    timezone: TimeZoneName = 'America/Los_Angeles'
 
 # === Web Search Tool ===
 @app.tool()
@@ -40,7 +40,7 @@ def web_search(
     model: Literal['gpt-4o', 'gpt-4o-mini'] = 'gpt-4o-mini',
     type: Literal['web_search_preview', 'web_search_preview_2025_03_11'] = 'web_search_preview',
     search_context_size: Literal["low", "medium", "high"] = 'medium',
-    user_location: UserLocation = None
+    user_location: UserLocation = UserLocation(),
 ) -> list[str]:
     logger.info(f"web_search called with input: {input}")
     logger.debug(f"model={model}, type={type}, search_context_size={search_context_size}, user_location={user_location}")
